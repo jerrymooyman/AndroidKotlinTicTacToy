@@ -97,6 +97,8 @@ class MainActivity : AppCompatActivity() {
             if(player2.isActive) {
                 autoPlay()
             }
+        } else {
+            Toast.makeText(this, "Its a draw", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -125,6 +127,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun getEmptyCells(player1Picks:List<Int>, player2Picks:List<Int>, allCellNumbers:List<Int>):List<Int> {
+        // this feels very verbose; is there a more succinct way of doing this?
         var selectedCells = ArrayList<Int>()
         selectedCells.addAll(player1Picks)
         selectedCells.addAll(player2Picks)
