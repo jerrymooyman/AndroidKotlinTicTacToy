@@ -13,9 +13,37 @@ import kotlin.collections.HashMap
 
 class MainActivity : AppCompatActivity() {
 
-    val NO_PLAYER = -1
+    class Player(val id: Int, val colour: Int, val mark: String, var isActive: Boolean) {
+        val picks = arrayListOf<Int>()
+        lateinit var opponent:Player
+
+        fun passTurn() {
+            isActive = false
+            opponent.acceptTurn()
+        }
+
+        fun acceptTurn() {
+            isActive = true
+        }
+
+        fun addPick(cellId: Int) {
+            // is there a way to avoid mutation?
+            // i.e. create a new collection which includes the new item.
+            picks.add(cellId)
+        }
+
+        fun acceptOpponent(otherPlayer:Player) {
+            // is there a way i can assign this only once?
+            opponent = otherPlayer
+        }
+    }
+
+    // is there a const equivilant?
     val PLAYER_1 = 1
     val PLAYER_2 = 2
+
+    var player1 = Player(PLAYER_1, Color.GREEN, "X", true)
+    var player2 = Player(PLAYER_2, Color.BLUE, "O", false)
 
     val allCellNumbers = arrayListOf(1,2,3,4,5,6,7,8,9)
 
@@ -47,38 +75,28 @@ class MainActivity : AppCompatActivity() {
                 8 to bu8,
                 9 to bu9
         )
-    }
 
-    var player1Picks = arrayListOf<Int>()
-    var player2Picks = arrayListOf<Int>()
-    var ActivePlayer = PLAYER_1
+        player1.acceptOpponent(player2)
+        player2.acceptOpponent(player1)
+    }
 
     fun buClick(view: View) {
         val buSelected = view as Button
-        var cellId = buttonIdToCell(buSelected.id)
-
-        playGame(cellId, buSelected)
+        playGame(buSelected)
     }
 
-    fun playGame(cellId: Int, buSelected: Button) {
-        var winningPlayer:Int
-        if (ActivePlayer == PLAYER_1) {
-            playerMove(cellId, buSelected, player1Picks, Color.GREEN, "X")
-            winningPlayer = if (checkWinner(player1Picks)) PLAYER_1 else NO_PLAYER
-            if (getEmptyCells(player1Picks, player2Picks, allCellNumbers).isNotEmpty()) {
-                ActivePlayer = PLAYER_2
-            }
-        } else {
-            playerMove(cellId, buSelected, player2Picks, Color.BLUE, "O")
-            winningPlayer = if (checkWinner(player2Picks)) PLAYER_2 else NO_PLAYER
-            ActivePlayer = PLAYER_1
-        }
+    fun playGame(buSelected: Button) {
+        val currentPlayer = if (player1.isActive) player1 else player2
+        playerMove(buSelected, currentPlayer)
 
-        if (winningPlayer != NO_PLAYER) {
-            Toast.makeText(this, "Player $winningPlayer wins the game", Toast.LENGTH_LONG).show()
+        if (hasWon(currentPlayer)) {
+            Toast.makeText(this, "Player " + currentPlayer.id + " wins the game", Toast.LENGTH_LONG).show()
             endGame()
-        } else if ( ActivePlayer == PLAYER_2) {
-            autoPlay()
+        } else if (getEmptyCells(player1.picks, player2.picks, allCellNumbers).isNotEmpty()) {
+            currentPlayer.passTurn()
+            if(player2.isActive) {
+                autoPlay()
+            }
         }
     }
 
@@ -86,17 +104,20 @@ class MainActivity : AppCompatActivity() {
         buttonMap.mapValues { b -> b.value.isEnabled = false }
     }
 
-    fun playerMove(cellId: Int, buSelected: Button, playerPicks: ArrayList<Int>, color: Int, playerMark: String) {
-        buSelected.text = playerMark
-        buSelected.setBackgroundColor(color)
+    fun playerMove(buSelected: Button, player:Player) {
+        // apply mutation to button... (yuk!)
+        buSelected.text = player.mark
+        buSelected.setBackgroundColor(player.colour)
         buSelected.isEnabled = false
-        playerPicks.add(cellId)
+
+        var cellId = buttonIdToCell(buSelected.id)
+        player.addPick(cellId)
     }
 
-    fun checkWinner(playerPicks: ArrayList<Int>): Boolean {
-        return hasRun(playerPicks, ROW_1) || hasRun(playerPicks, ROW_2) || hasRun(playerPicks, ROW_3)
-                || hasRun(playerPicks, COL_1) || hasRun(playerPicks, COL_2) || hasRun(playerPicks, COL_3)
-                || hasRun(playerPicks, DIAG_1) || hasRun(playerPicks, DIAG_2)
+    fun hasWon(player:Player): Boolean {
+        return hasRun(player.picks, ROW_1) || hasRun(player.picks, ROW_2) || hasRun(player.picks, ROW_3)
+                || hasRun(player.picks, COL_1) || hasRun(player.picks, COL_2) || hasRun(player.picks, COL_3)
+                || hasRun(player.picks, DIAG_1) || hasRun(player.picks, DIAG_2)
     }
 
     fun hasRun(playerPicks: List<Int>, cellsForRun: List<Int>): Boolean {
@@ -128,12 +149,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun autoPlay() {
-        val emptyCells = getEmptyCells(player1Picks, player2Picks, allCellNumbers)
+        val emptyCells = getEmptyCells(player1.picks, player2.picks, allCellNumbers)
 
         val randomIndex = Random().nextInt(emptyCells.size-0)+0
         val cellId = emptyCells[randomIndex]
 
         val buSelected = cellIdToButton(cellId)
-        playGame(cellId, buSelected)
+        playGame(buSelected)
     }
 }
